@@ -1,0 +1,107 @@
+---
+title: "homework6"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+---
+
+#Task1
+
+**Consider such a factor as player's value.**
+**There is a huge number of different statistics in hockey. However, many ice hockey experts consider three most important features that characterize how useful (resp. how valuable) player is. These are P60, PenD and CF%. The first item shows how many points player get every game. The more P60 is, the more valuable player is. The second item is a differential between number of penalties drawn by the player and number of penalties taken by the player. The more PenD is, the more player's team has Powerplays, the more useful player is. The last one reflects the ration between shots made by player’s team and shots made by opponents while player is on the ice. It is clear that the more CF% value is, the more valuable player is.**
+
+```{r, include=TRUE}
+#setwd('/Users/')
+data = read.csv("data.csv", sep = ",")
+data <- data[order(data$ZSO,decreasing=FALSE),]
+data1 <- data[,12:14] #derive three features
+summary(data1)
+```
+
+#Task2
+
+**For this task we need to determine the different group of players. Consider ZSO feature. It is higher if a player starts his game change in the oponent's zone more often than in the home zone. P60, PenD, CF% are all related to the ZSO-value, because the more ZSO is the more chances a player has to get the points, gain the Powerplay and make his CF higher. So for this reason we have sorted our data by ZSO increase in the Task1 and we will take into account players with low/high ZSO-value when visualizing our data.**
+
+```{r, include=TRUE}
+#standardization with the normalization over deviations (Z-scoring)
+standardizeByDeviation <- function(x) {
+    y <- (x - mean(x))/(sd(x))
+    y
+}
+#standardization with the normalization over ranges
+standardizeByRange <- function(x) {
+    y <- (x - mean(x))/(max(x)-min(x))
+    y
+}
+data2 <- data1
+stdByDeviationData2 <- as.data.frame(lapply(data2, standardizeByDeviation))
+stdByRangeData2 <- as.data.frame(lapply(data2, standardizeByRange))
+#Compute two first singular triplets:
+resultOfSVD1 <- svd(stdByRangeData2, nu=2, nv=2, LINPACK = FALSE)
+Z1_1 <- resultOfSVD1$u[,1]*sqrt(resultOfSVD1$d[1])
+Z2_1 <- resultOfSVD1$u[,2]*sqrt(resultOfSVD1$d[2])
+#Determine the proportion of the variance taken into account:
+p1 <- (resultOfSVD1$d[1]^2+resultOfSVD1$d[2]^2)/sum(sum(stdByRangeData2*stdByRangeData2))
+plot(Z1_1[1:418],Z2_1[1:418],col="blue",pch=2,xlab=NA,ylab=NA,main="Standardization with 
+the normalization over ranges",sub="Blue - low-ZSO players
+Red - high-ZSO players") #plot low-ZSO
+points(Z1_1[419:836],Z2_1[419:836],col="red",pch=1) #plot high-ZSO
+resultOfSVD2 <- svd(stdByDeviationData2, nu=2, nv=2, LINPACK = FALSE)
+Z1_2 <- resultOfSVD2$u[,1]*sqrt(resultOfSVD2$d[1])
+Z2_2 <- resultOfSVD2$u[,2]*sqrt(resultOfSVD2$d[2])
+#Determine the proportion of the variance taken into account:
+p2 <- (resultOfSVD2$d[1]^2+resultOfSVD2$d[2]^2)/sum(sum(stdByDeviationData2*stdByDeviationData2))
+plot(Z1_2[1:418],Z2_2[1:418],col="blue",pch=2,xlab=NA,ylab=NA,main="Standardization with 
+the normalization over deviations",sub="Blue - low-ZSO players
+Red - high-ZSO players") #plot low-ZSO
+points(Z1_2[419:836],Z2_2[419:836],col="red",pch=1) #plot high-ZSO
+
+summary(stdByRangeData2) #display summary of stdByRangeData2
+
+p1 #display the proportion of the variance taken into account by stdByRangeData2
+
+summary(stdByDeviationData2) #display summary of stdByDeviationData2
+
+p2 #display the proportion of the variance taken into account by stdByDeviationData2
+```
+
+**Two plots are very similar, except only displaying ranges. We can see, maybe not quite clear, two groups of players with high/low ZSO-value. It is hard to say which normalization is better from the plots. However, normalization over deviations should make all features contribute similarly to the data scatter. This is confirmed by the fact that the computed proportion of the variance taken into account when normalizing over deviations (82%) is a little bit more than the computed proportion of the variance taken into account when normalizing over ranges (81%).**
+
+#Task3
+
+```{r, include=TRUE}
+library(base)
+#convert base features into the same scale, 0 to 100, to form matrix data1 for using in PCA
+data1[1] <- data1[1]*100/max(data1[1])
+data1[2] <- data1[2]-min(data1[2])
+data1[2] <- data1[2]*100/max(data1[2])
+data1[3] <- data1[3]-min(data1[3])
+data1[3] <- data1[3]*100/max(data1[3])
+summary(data1) #normalized features from 0 to 100
+resultOfSVD <- svd(data1, nu=1, nv=1, LINPACK = FALSE) #apply PCA to the data to find 
+#the First singular triplet
+z <- -resultOfSVD$u #first singular 836D scoring vector
+Mu <- resultOfSVD$d[1] #maximum singular value
+c <- -resultOfSVD$v #loadings
+#we need to rescale z to convert it to 0 – 100 scale
+#we have equation for the hidden factor:
+#Z = (c[1]*P60+c[2]*PenD+c[3]*CF)*alpha
+#Find alpha that Z=100 at all features being 100
+alpha <- 100/(c[1]*100+c[2]*100+c[3]*100)
+#The FINAL equation is:
+Z <- c[1]*alpha*data1$P60+c[2]*alpha*data1$PenD+c[3]*alpha*data1$CF #Here Z reflects 
+#how valuable player is from 0 to 100
+ds <- sum(sum(data1*data1)) #data scatter
+contrib <- 100*(Mu^2)/ds #Contribution of thefirst component to the data scatter
+
+t(c) #display loadings
+
+contrib #display contribution
+
+cbind(data1, Z)[10:20,] #display 10 players summary table for clarity
+#with computed hidden factor (value of the player)
+```
+
+**From loadings' interpretation we can conclude that CF% plays more important role in player's utility estimation (by about 1.23 more than PenD, by about 2.39 more than P60). It may seem strange from the one hand. Usual people think that the number of points is the most significant value. However, our results confirm the fact that the coaching staff and scouts appreciate player's ability to gain the Powerplays for the team and defensive skills (CF% shows not only how many shots was made by player’s team, but also how few shots was made by opponents while player is on the ice).**
+**Also, we got a good contribution: 95.08%**
+

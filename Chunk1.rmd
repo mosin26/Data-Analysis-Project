@@ -1,0 +1,223 @@
+---
+title: "home_work2"
+output: pdf_document
+---
+
+task1:
+
+All information in summary:
+
+```{r}
+data = read.csv("data.csv", sep = ",")
+summary(data)
+colnames(data)
+```
+
+As we know age is one of the most important factors in hockey, a lot of other characteristics depends on it. Also the hockey experts usually compare the average age of teams and then make some assumptions about how the teams play.
+
+histogram:
+
+```{r, echo=FALSE}
+hist(data$Age, 8)
+
+```
+
+boxplot:
+
+```{r}
+boxplot(data$Age, main = 'Boxplot of data$Age', horizontal = TRUE)
+
+```
+
+mean:
+
+```{r}
+mean(data$Age)
+```
+median:
+
+```{r}
+median(data$Age)
+```
+
+mode:
+
+```{r}
+
+findMode <- function(arg){
+data.t <- table(arg)
+return(sort(unique(arg))[which.max(data.t)])
+}
+findMode(data$Age)
+```
+
+Hockey clubs select players since 18 years and track them throughout their careers. But if a player has not proved himself up to a certain age, then club parted with him. The mode is 23 years, it shows that basically in this age clubs give players a last chance to show themselves. Later on most of them goes to the lower league. Therefore, there is a so large number of 23-year-old players in the league.
+A median more than mode just because the maximum players' age is 42 years, and in addition to the 23-year-old players core of the team for the most part consits of the older players.
+
+task2:
+
+statistical mean:
+
+```{r}
+mean(data$Age)
+n <- nrow(data)
+m <- mean(data$Age)
+s <- sd(data$Age)
+conf.int <- c(m-1.965*s/sqrt(n), m+1.965*s/sqrt(n))
+print(conf.int)
+```
+
+bootstrap:
+
+```{r}
+means <- c()
+for(i in 1:5000)
+  {
+  means[i] <- mean(sample(data$Age, 50, replace = TRUE))
+  }
+```
+
+new histogram:
+
+```{r}
+hist(means)
+```
+
+Because the histogram is similar to a normal distribution, we apply the technique of pivotal bootstrap.
+
+```{r}
+n <- 5000
+m <- mean(means)
+s <- sd(means)
+pivotal.conf.int <- c(m-1.965*s/sqrt(n), m+1.965*s/sqrt(n))
+print(pivotal.conf.int)
+```
+
+non-pivotal bootstrap:
+
+```{r}
+sorted.means  <- sort(means)
+nonpivotal.conf.int <- c(sorted.means[0.025*5000], sorted.means[5000-0.025*5000])
+print(nonpivotal.conf.int)
+```
+
+Statistical confidence interval [25.93271 26.54336]
+
+task3:
+
+pivotal bootstrap for median:
+
+```{r}
+medians <- c()
+for(i in 1:5000)
+  {
+  medians[i] <- median(sample(data$Age, 50, replace = TRUE))
+  }
+hist(medians)
+```
+
+Because the histogram is not similar to a normal distribution, we can't apply the technique of pivotal bootstrap here.
+
+Non-pivotal bootstrap for median:
+
+```{r}
+sorted.medians  <- sort(medians)
+nonpivotal.conf.int <- c(sorted.medians[0.025*5000], sorted.medians[5000-0.025*5000])
+print(nonpivotal.conf.int)
+```
+
+pivotal bootstrap for mode:
+
+```{r}
+modes <- c()
+for(i in 1:5000)
+  {
+  modes[i] <- findMode(sample(data$Age, 50, replace = TRUE))
+  }
+hist(modes)
+```
+
+Because the histogram is not similar to a normal distribution, we can't apply the technique of pivotal bootstrap here.
+
+Non-pivotal bootstrap for mode:
+
+```{r}
+sorted.modes  <- sort(modes)
+nonpivotal.conf.int <- c(sorted.modes[0.025*5000], sorted.modes[5000-0.025*5000])
+print(nonpivotal.conf.int)
+```
+
+task 4:
+
+Devide players into two groups. Name players who has a salary higher than the median of all salaries in the league high-salary players, and who has a salary lower than the median - low-salary players. Consider their ages.
+
+```{r}
+high.salary.players  <- data[data$Salary >= median(data$Salary),]
+low.salary.players  <- data[data$Salary < median(data$Salary),]
+print (mean(high.salary.players$Age))
+print (mean(low.salary.players$Age))
+```
+
+
+bootstrap for high.salary.means:
+
+```{r}
+high.salary.means <- c()
+for(i in 1:5000)
+  {
+  high.salary.means[i] <- mean(sample(high.salary.players$Age, 50, replace = TRUE))
+  }
+hist(high.salary.means)
+```
+
+Because the histogram is similar to a normal distribution, we apply the technique of pivotal bootstrap.
+
+```{r}
+n <- 5000
+m <- mean(high.salary.means)
+s <- sd(high.salary.means)
+pivotal.conf.int <- c(m-1.965*s/sqrt(n), m+1.965*s/sqrt(n))
+print(pivotal.conf.int)
+```
+
+Non-pivotal bootstrap for high.salary.means:
+
+```{r}
+sorted.high.salary.means  <- sort(high.salary.means)
+nonpivotal.conf.int <- c(sorted.high.salary.means[0.025*5000],
+                         sorted.high.salary.means[5000-0.025*5000])
+print(nonpivotal.conf.int)
+```
+
+bootstrap for low.salary.means:
+
+```{r}
+low.salary.means <- c()
+for(i in 1:5000)
+  {
+  low.salary.means[i] <- mean(sample(low.salary.players$Age, 50, replace = TRUE))
+  }
+hist(low.salary.means)
+```
+
+Because the histogram is similar to a normal distribution, we apply the technique of pivotal bootstrap.
+
+```{r}
+n <- 5000
+m <- mean(low.salary.means)
+s <- sd(low.salary.means)
+pivotal.conf.int <- c(m-1.965*s/sqrt(n), m+1.965*s/sqrt(n))
+print(pivotal.conf.int)
+```
+
+Non-pivotal bootstrap for high.salary.means:
+
+```{r}
+sorted.low.salary.means  <- sort(low.salary.means)
+nonpivotal.conf.int <- c(sorted.low.salary.means[0.025*5000],
+                         sorted.low.salary.means[5000-0.025*5000])
+print(nonpivotal.conf.int)
+```
+
+Confidence intervals differs considerably. It is clear, that high-salary players are older than low-salary players on the average, because older players has more experience and, hense, are more valuable.
+

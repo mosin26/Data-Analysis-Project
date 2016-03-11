@@ -1,0 +1,165 @@
+---
+title: "homework5"
+output: pdf_document
+---
+
+```{r, include= FALSE}
+#setwd('/Users/feygin/Desktop/HSE')
+data = read.csv("data.csv", sep = ",")
+summary(data)
+```
+
+#Task1
+
+##Linear regression for normalized data:
+
+**Another important problem of multidimensional linear regression is a sign of diversity. If the scales measuring attributes significantly (by several orders of magnitude) are different, then there is DANGER that will take into account only the "large-scale" signs. To avoid this, do the standardization**
+
+```{r}
+standardize <- function(x) {
+    y <- (x - mean(x))/(sd(x))
+    y
+}
+```
+
+**Let's see if we have correlation between data that we want to use for linear regression:**
+
+```{r}
+#summary(data)
+some.data <- data[,4:7]
+cor(some.data)
+#library(car)
+#scatterplotMatrix(some.data, spread=FALSE, lty.smooth=2, main="Matrix of diagram rass")
+```
+
+**Results of modeling:**
+
+```{r}
+target  <- some.data$Salary
+some.data$Salary <- NULL
+raw.data <- some.data
+normal.data <- as.data.frame(lapply(some.data, standardize))
+norm.m  <-  lm(target ~., normal.data)
+#summary(norm.m)
+print(norm.m$coefficients)
+plot(norm.m)
+```
+
+##Linear regression for raw data:
+
+```{r}
+raw.m  <-  lm(target ~., raw.data)
+#summary(raw.m)
+print(raw.m$coefficients)
+#plot(raw.m)
+```
+
+**We can conclude that the number of Goals has the most impact on the player's Salary. This means that the Salary would change more on the average if the number of Goals is increased, while the others features do not change, rather than if the other features are changed. Also, we see that the data standartization has led us to increased coefficients. It is so because the raw data values is bigger than the standardized data values.**
+
+\newpage
+
+#Taks2
+
+##Determinacy coefficient
+
+```{r}
+print(summary(norm.m)$r.square)
+```
+
+##Let's count 95% confidence interval of determinacy coefficient using bootstrap
+
+```{r}
+boot.data <-data[,4:7]
+rsq <- function(data, indices) {
+         d <- data[indices,]
+         target <- d$Salary
+         d$Salary <- NULL
+         fit <- lm(target~., data=d)
+         return(summary(fit)$r.square)
+}
+
+library(boot)
+set.seed(1234)
+results <- boot(data=boot.data, statistic=rsq,
+                R=1000)
+print(results)
+plot(results)
+```
+
+**We see that the Determinacy coefficient from the summary of the linear regression from the previous task and computed Determinacy coefficient are the same**
+
+##Confidence interval:
+
+```{r}
+boot.ci(results, conf=0.95, type=c("bca"))
+```
+
+**It says us about that Gm, Age and G explain from 38% to 48% of the variance of the Salary with 95% probability**
+
+\newpage
+
+#Task 3
+
+**Devide our dataset in two groups: forwards and defencemans. Take Salary	P60,	PenD,	CF%,	PDO,	PSh%,	ZSO%Rel,	TOI/Gm as input features. To find an appropriate Linear discriminant rule put 1 for all forwards and -1 for all defencemans and apply the least-squares criterion of linear regression. After additional rounding we get the following contingency table.**
+
+```{r}
+target <- c()
+index <- which(data$pos == "LD"|data$pos == "DR"|data$pos == "D"|data$pos == "RD")
+target[index] <- 2
+target[is.na(target)] <- 1
+
+library(MASS)
+std.data <- data[,12:18]
+hockey.lda <- lda(target ~ ., data=std.data)
+hockey.lda
+hockey.lda.values <- predict(hockey.lda)
+```
+
+**A nice way of displaying the results of a linear discriminant analysis (LDA) is to make a stacked histogram of the values of the discriminant function for the samples from different groups (different targets in our example).**
+
+```{r}
+summary(hockey.lda.values)
+ldahist(data = hockey.lda.values$x[,1], g=target)
+#plot(hockey.lda.values$x[,1])
+#text(hockey.lda.values$x[,1],target,cex=1,pos=4,col="red")
+```
+
+**To cross-validate the accuracy of the Linear discriminant rule use the following code:**
+```{r}
+library("crossval")
+predfun.lda = function(train.x, train.y, test.x, test.y, negative)
+{
+  require("MASS")
+  lda.fit = lda(train.x, grouping=train.y)
+  ynew = predict(lda.fit, test.x)$class
+  out = confusionMatrix(test.y, ynew, negative=negative)
+  return( out )
+}
+```
+**2-fold validation scheme for the Linear discriminant rule gives us the following:**
+```{r}
+cv.out = crossval(predfun.lda, std.data, target, K=2, B=1, negative="1",verbose=FALSE)
+diagnosticErrors(cv.out$stat)
+```
+**10-fold validation scheme for the Linear discriminant rule gives us the following:**
+```{r}
+cv.out = crossval(predfun.lda, std.data, target, K=10, B=1, negative="1",verbose=FALSE)
+diagnosticErrors(cv.out$stat)
+```
+
+**Discriminant analysis by Fishers rule.**
+
+```{r}
+library(penalizedLDA)
+set.seed(1)
+n <- nrow(std.data)
+p <- ncol(std.data)
+x <- std.data
+y <- target
+out <- PenalizedLDA(x,y,lambda=.14,K=1)
+out$discrim
+pred.out <- predict(out,xte=std.data)
+accuracy <- (nrow(data)-sum(std.data$target != pred.out))/nrow(data)
+print(accuracy)
+out <- PenalizedLDA.cv(x, y, lambdas = NULL, K = NULL, nfold = 6, folds = NULL, type = "standard", chrom = NULL, lambda2 = NULL)
+```

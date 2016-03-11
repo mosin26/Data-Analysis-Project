@@ -1,0 +1,75 @@
+---
+title: "homework7"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+---
+
+```{r, include=FALSE}
+#standardization with the normalization over ranges
+standardize <- function(x) {
+    y <- (x - mean(x))/(max(x)-min(x))
+    y
+}
+#libraries
+library(vegan)
+library(stats)
+library(cluster)
+require(graphics)
+```
+
+#Task1
+
+**We take Gm, Age and Salary as parametrs for clustering.**
+
+```{r, include=TRUE}
+data = read.csv("data.csv", sep = ",") #read the data
+data <- data[,4:6]
+stdData <- as.data.frame(lapply(data, standardize)) #preprocessing
+cl3 <- kmeans(stdData, 3)
+cl3$tot.withinss #total within-cluster sum of squares
+# Cluster Plot against 1st 2 principal components
+clusplot(stdData, cl3$cluster, color=TRUE, shade=TRUE)
+cl4 <- kmeans(stdData, 4)
+cl4$tot.withinss #total within-cluster sum of squares
+# Cluster Plot against 1st 2 principal components
+clusplot(stdData, cl4$cluster, color=TRUE, shade=TRUE)
+cl7 <- kmeans(stdData, 7)
+cl7$tot.withinss #total within-cluster sum of squares
+# Cluster Plot against 1st 2 principal components
+clusplot(stdData, cl7$cluster, color=TRUE, shade=TRUE)
+```
+
+**The correct choice of k is often ambiguous, with interpretations depending on the shape and scale of the distribution of points in a data set and the desired clustering resolution of the user. In addition, increasing k without penalty will always reduce the amount of error in the resulting clustering, to the extreme case of zero error if each data point is considered its own cluster (i.e., when k equals the number of data points, n). Intuitively then, the optimal choice of k will strike a balance between maximum compression of the data using a single cluster, and maximum accuracy by assigning each data point to its own cluster.**
+
+**So, in our case we see that the total within-cluster sum of squares is redusing as k is getting bigger (from 165 for k=3 to 125 for k=7).**
+
+#Task2
+
+**Build a minimum spanning tree connecting all points and delete 6 maximum edges step by step.**
+
+```{r, include=TRUE}
+dis <- dist(stdData) #dissimilarity data
+tr <- spantree(dis, toolong = 0) #build an MST
+plot(tr, cmdscale(dis)) #plot an MST
+for(i in 1:6) #loop for finding 6 maximum edges in MST
+{
+  m <- which.max(tr$dist)
+  tr$dist[m] <- NA
+}
+m <- which.max(tr$dist)
+tres <- tr$dist[m] + 0.00001 #set a treshold
+j <- distconnected(dis, toolong = tres) #find connected components in MST after deleting 6 edges
+clusplot(stdData, j, color=TRUE, shade=TRUE) #plot clusters
+```
+
+**As we see, MST doesn't work good for our data. It devides dataset in 1 big cluster and 6 small (1-3 players). Make sure that it is true by using the single linkage method (which is closely related to the minimal spanning tree).**
+
+```{r, include=TRUE}
+hc <- hclust(dist(stdData), method = "single")
+plot(hc, labels = FALSE)
+memb <- cutree(hc, k = 7)
+clusplot(stdData, memb, color=TRUE, shade=TRUE, lines=0)
+```
+
+**We get the same results (1 big cluster with 828 players, 1 cluster with 3 plauers and 5 clusters with 1 player). This may be partly because MST (with a single linkage) finds elongated structures in data. However, hockey features don't have any geometric meaning. So, in our case K-means works much better (although not perfect) which makes convex clusters of players by grouping them around some centroids.**

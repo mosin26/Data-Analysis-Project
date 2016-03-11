@@ -1,0 +1,119 @@
+---
+title: "Home work 3"
+output: pdf_document
+---
+
+##Task 1
+
+```{r}
+data = read.csv("data.csv", sep = ",")
+colnames(data)
+y <- data$P
+x <- data$A
+plot(x,y)
+
+##Task 2
+
+m <- lm(y ~ x)
+slope <- m$coefficients[2]
+print(slope)
+intercept <- m$coefficients[1]
+print(intercept)
+abline(m)
+summary(m)
+
+# calculate residuals and predicted values
+res <- signif(residuals(m), 5)
+pre <- predict(m) # plot distances between points and the regression line
+segments(x, y, x, pre, col="red")
+```
+
+#Task 3
+
+```{r}
+cor(x,y)
+cor(x,y)*cor(x,y)
+```
+This shows that the linear regression A and P reduces the spread of values P at 92% - very high value
+
+#Task 4
+
+pivotal bootstrap:
+
+```{r}
+# n <- nrow(data)
+# test_rows <- c()
+# slopes <- c()
+# intercepts <- c()
+# cors <- c()
+# for(i in 1:5000)
+#   {
+#   test_rows <- sample(n, n, replace = TRUE)
+#   x <- c()
+#   y <- c()
+#   for(j in 1:n)
+#   {
+#     x[j] <- data$A[test_rows[j]]
+#     y[j] <- data$P[test_rows[j]]
+#   }
+#   newdata <- data.frame(x, y)
+#   m <- lm(y ~ x)
+#   slopes[i] <- m$coefficients[2]
+#   intercepts[i] <- m$coefficients[1]
+#   cors[i] <- cor(x,y)
+# }
+# hist(slopes)
+# hist(intercepts)
+# hist(cors)
+# ```
+Because the histogram is similar to a normal distribution, we apply the technique of pivotal bootstrap.
+#Slope:
+# ```{r}
+# n <- 5000
+# m <- mean(slopes)
+# s <- sd(slopes)
+# pivotal.conf.int <- c(m-1.96*s/sqrt(n), m+1.96*s/sqrt(n))
+# print(pivotal.conf.int)
+```
+#Intercept:
+```{r}
+n <- 5000
+m <- mean(intercepts)
+s <- sd(intercepts)
+pivotal.conf.int <- c(m-1.96*s/sqrt(n), m+1.96*s/sqrt(n))
+print(pivotal.conf.int)
+```
+#Cor:
+```{r}
+n <- 5000
+m <- mean(cors)
+s <- sd(cors)
+pivotal.conf.int <- c(m-1.96*s/sqrt(n), m+1.96*s/sqrt(n))
+print(pivotal.conf.int)
+```
+As we see, bootstrap confirms the results of the linear regression
+
+#Task 5
+
+```{r}
+index <- which(data$P > 0)
+print(mean((abs((data$P[index] - slope*data$A[index] - intercept)/data$P[index]))*100))
+```
+Although determinacy coefficient value is very high (about 92%), the average relative error is also high (about 29%). Linear regression minimizes the average squared difference. However, the average relative error can be made lower by using a nature inspired optimization approach.
+
+#Task 6
+
+```{r}
+in
+a <- c()
+n <- nrow(data)
+for(i in 1:n)
+{
+  for(j in 1:n)
+  {
+      a[i][j] = (data$P[i]-data$P[j])/(data$A[i]-data$A[j])
+  }
+}
+print(max(a))
+```
+
